@@ -10,15 +10,10 @@ apt-get update && apt-get upgrade -y
 apt-get install unzip -y
 
 # پرسیدن نوع عملیات
-
 echo "chikar konim kako :"
-
-echo "1: to kharjiii" 
-
 echo "2: to iraniii "
-
+echo "1: to kharjiii"
 echo "3: hazfkon"
-
 read -p " (1 ya 2 ya 3): " operation_type
 
 if [ "$operation_type" -eq 3 ]; then
@@ -27,7 +22,6 @@ if [ "$operation_type" -eq 3 ]; then
   systemctl disable waterwall.service
 
   # حذف فایل‌های سرویس
-
   rm -f /etc/systemd/system/waterwall.service
 
   # حذف تمامی فایل‌ها و برنامه‌های نصب شده
@@ -51,9 +45,9 @@ chmod u+x Waterwall
 
 # پرسیدن نوع سرور
 if [ "$operation_type" -eq 1 ]; then
-  echo "khraj mikony."
-elif [ "$operation_type" -eq 2 ]; then
   echo "iran mikony."
+elif [ "$operation_type" -eq 2 ]; then
+  echo "khrah mikony."
 else
   echo "انتخاب نامعتبر است."
   exit 1
@@ -105,7 +99,109 @@ for (( i=1; i<=server_count; i++ )); do
   fi
 
   if [ "$operation_type" -eq 1 ]; then
+   
     read -p "ip kharj $i: " external_ip
+    
+    read -p "sni $i: " site
+
+    cat <<EOL > /root/$config_name
+{
+    "name": "reverse_reality_grpc_hd_multiport",
+    "nodes": [
+        {
+            "name": "users_inbound",
+            "type": "TcpListener",
+            "settings": {
+                "address": "0.0.0.0",
+                "port": [23, 65535],
+                "nodelay": true
+            },
+            "next": "header"
+        },
+        {
+            "name": "header",
+            "type": "HeaderClient",
+            "settings": {
+                "data": "src_context->port"
+            },
+            "next": "bridge2"
+        },
+        {
+            "name": "bridge2",
+            "type": "Bridge",
+            "settings": {
+                "pair": "bridge1"
+            }
+        },
+        {
+            "name": "bridge1",
+            "type": "Bridge",
+            "settings": {
+                "pair": "bridge2"
+            }
+        },
+        {
+            "name": "reverse_server",
+            "type": "ReverseServer",
+            "settings": {},
+            "next": "bridge1"
+        },
+        {
+            "name": "pbserver",
+            "type": "ProtoBufServer",
+            "settings": {},
+            "next": "reverse_server"
+        },
+        {
+            "name": "h2server",
+            "type": "Http2Server",
+            "settings": {},
+            "next": "pbserver"
+        },
+        {
+            "name": "halfs",
+            "type": "HalfDuplexServer",
+            "settings": {},
+            "next": "h2server"
+        },
+        {
+            "name": "reality_server",
+            "type": "RealityServer",
+            "settings": {
+                "destination": "reality_dest",
+                "password": "CwnwTgwISo"
+            },
+            "next": "halfs"
+        },
+        {
+            "name": "kharej_inbound",
+            "type": "TcpListener",
+            "settings": {
+                "address": "0.0.0.0",
+                "port": 443,
+                "nodelay": true,
+                "whitelist": [
+                    "$ip"
+                ]
+            },
+            "next": "reality_server"
+        },
+        {
+            "name": "reality_dest",
+            "type": "TcpConnector",
+            "settings": {
+                "nodelay": true,
+                "address": "$site",
+                "port": 443
+            }
+        }
+    ]
+}
+EOL
+  else
+    
+    read -p "ip iran $i: " ip
+    
     read -p "sni $i: " site
 
     cat <<EOL > /root/$config_name
@@ -119,101 +215,6 @@ for (( i=1; i<=server_count; i++ )); do
                 "nodelay": true,
                 "address": "127.0.0.1",
                 "port": "dest_context->port"
-            }
-        },
-        {
-            "name": "header",
-            "type": "HeaderServer",
-            "settings": {
-                "override": "dest_context->port"
-            },
-            "next": "outbound_to_core"
-        },
-        {
-            "name": "bridge1",
-            "type": "Bridge",
-            "settings": {
-                "pair": "bridge2"
-            },
-            "next": "header"
-        },
-        {
-            "name": "bridge2",
-            "type": "Bridge",
-            "settings": {
-                "pair": "bridge1"
-            },
-            "next": "reverse_client"
-        },
-        {
-            "name": "reverse_client",
-            "type": "ReverseClient",
-            "settings": {
-                "minimum-unused": 16
-            },
-            "next": "pbclient"
-        },
-        {
-            "name": "pbclient",
-            "type": "ProtoBufClient",
-            "settings": {},
-            "next": "h2client"
-        },
-        {
-            "name": "h2client",
-            "type": "Http2Client",
-            "settings": {
-                "host": "$site",
-                "port": 443,
-                "path": "/",
-                "content-type": "application/grpc",
-                "concurrency": 128
-            },
-            "next": "halfc"
-        },
-        {
-            "name": "halfc",
-            "type": "HalfDuplexClient",
-            "next": "reality_client"
-        },
-        {
-            "name": "reality_client",
-            "type": "RealityClient",
-            "settings": {
-                "sni": "$site",
-                "password": "CwnwTgwISo"
-            },
-            "next": "outbound_to_iran"
-        },
-        {
-            "name": "outbound_to_iran",
-            "type": "TcpConnector",
-            "settings": {
-                "nodelay": true,
-                "address": "$external_ip",
-                "port": 443
-            }
-        }
-    ]
-}
-EOL
-  else
-
-    read -p "ip iran $i: " ip
-
-    read -p "sni $i: " site
-
-    cat <<EOL > /root/$config_name
-{
-    "name": "reverse_reality_grpc_client_hd_multiport_client",
-    "nodes": [
-        {
-            "name": "outbound_to_core",
-            "type": "TcpConnector",
-            "settings": {
-                "nodelay": true,
-                "address": "127.0.0.1",
-                "port": [23, 65535],
             }
         },
         {
@@ -332,12 +333,12 @@ echo "سرویس Waterwall به‌درستی نصب و راه‌اندازی ش�
 
 # پرسیدن زمان‌بندی ریستارت سرویس
 echo "har chand sait restart konm:"
-echo "1: 1 Hore "
-echo "2: 2 Hore "
-echo "3: 3 Hore "
-echo "4: 4 Hore "
-echo "5: 5 Hore "
-echo "6: 6 Hore "
+echo "1: 1 H "
+echo "2: 2 H "
+echo "3: 3 H "
+echo "4: 4 H "
+echo "5: 5 H "
+echo "6: 6 H "
 read -p "bgo kako  (1 ta 6): " restart_interval
 
 case "$restart_interval" in
@@ -366,9 +367,8 @@ case "$restart_interval" in
 esac
 
 # تنظیم زمان‌بندی ریستارت سرویس
-crontab -l | { cat; echo "*/$((interval_sec/3600)) * * * * /bin/systemctl restart waterwall.service"; } | crontab -
+crontab -l | { cat; echo "*/$((interval_sec/3600)) * * * * systemctl restart waterwall.service"; } | crontab -
 
-echo "bos ${restart_interval} ok shok ."
+echo "bos ${restart_interval} ok shok mikonm."
 
-echo "mehrdad konet pare shod ."
-echo  "kaaaakkkkkkkkoooooooo ."
+echo "kardm tmom shod sjaddd kako."
