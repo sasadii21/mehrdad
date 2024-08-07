@@ -366,7 +366,7 @@ case "$restart_interval" in
 esac
 
 # تنظیم زمان‌بندی ریستارت سرویس
-crontab -l | { cat; echo "*/$((interval_sec/3600)) * * * * systemctl restart waterwall.service"; } | crontab -
+crontab -l | { cat; echo "*/$((interval_sec/3600)) * * * * /bin/systemctl restart waterwall.service"; } | crontab -
 
 echo "bos ${restart_interval} ok shok ."
 
